@@ -1,333 +1,492 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Arcade Emoji Claw Machine - PWA</title>
-   
-    <!-- Meta tags PWA -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>3D Emoji Claw Machine - Arcade PWA</title>
+
+    <!-- PWA & Mobile Optimization Meta Tags -->
     <meta name="theme-color" content="#12131C">
-    <meta name="description" content="Jogo 3D de Máquina de Pegar Emojis do WhatsApp em Galeria de Shopping">
-    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Emoji Claws">
+    <meta name="apple-mobile-web-app-title" content="ClawArcade">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="Jogo PWA 3D da Máquina de Pegar Emojis do WhatsApp na Galeria de Shopping Arcade!">
 
-    <!-- Tailwind CSS, FontAwesome e Three.js / Cannon.js via CDNs -->
+    <!-- Dynamic Inline Web App Manifest Data URI -->
+    <link rel="manifest" id="pwa-manifest">
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Three.js 3D Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cannon.js Physics Engine -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-    <!-- Manifest PWA Injetado -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap');
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            touch-action: manipulation;
+            overflow: hidden;
+            background-color: #080911;
+            color: #ffffff;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Glassmorphism panel styling */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .neon-border {
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.5), inset 0 0 15px rgba(236, 72, 153, 0.3);
+        }
+
+        /* Arcade Push Button Styling */
+        .arcade-btn {
+            box-shadow: 0 8px 0 #9d174d, 0 15px 25px rgba(0,0,0,0.5);
+            transition: all 0.08s ease;
+        }
+        .arcade-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 2px 0 #9d174d, 0 5px 10px rgba(0,0,0,0.4);
+        }
+
+        /* Virtual Joystick Zone */
+        #joystick-zone {
+            touch-action: none;
+        }
+
+        /* WebGL Canvas */
+        #game-canvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        /* Digital LED Display */
+        .led-screen {
+            background: radial-gradient(circle, #022c22 0%, #020617 100%);
+            border: 2px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.35), inset 0 0 12px rgba(16, 185, 129, 0.2);
+        }
+
+        /* Animations */
+        .slide-text-anim {
+            transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+        }
+    </style>
+</head>
+<body class="relative w-screen h-screen overflow-hidden">
+
+    <!-- 3D Canvas Context -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top Navigation & Player Dashboard -->
+    <div id="ui-overlay" class="absolute top-0 left-0 right-0 p-3 md:p-6 pointer-events-none flex justify-between items-start z-10 hidden">
+        <!-- Player Information & Objectives -->
+        <div class="glass-panel rounded-2xl p-3 md:p-4 min-w-[220px] shadow-2xl flex flex-col gap-1 pointer-events-auto border-pink-500/30">
+            <div class="flex items-center justify-between border-b border-gray-700/60 pb-2 mb-1">
+                <span class="text-xs font-bold uppercase tracking-wider text-pink-400" id="display-player-name">Jogador</span>
+                <span class="bg-gradient-to-r from-pink-500 to-purple-600 text-white text-[11px] px-2.5 py-0.5 rounded-full font-black tracking-wide border border-pink-400/30" id="display-stage-name">Fase 1</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-400">Pontuação:</span>
+                <span class="text-xl font-black text-yellow-400 tracking-wider" id="display-score">0</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-400">Meta da Fase:</span>
+                <span class="text-sm font-bold text-emerald-400" id="display-target">0 / 300</span>
+            </div>
+            <div class="flex justify-between items-center mt-1">
+                <span class="text-xs text-gray-400">Fichas / Créditos:</span>
+                <div class="flex gap-1" id="display-credits"></div>
+            </div>
+        </div>
+
+        <!-- Action Bar: Install PWA, Fullscreen, Audio, Leaderboard -->
+        <div class="flex gap-2 pointer-events-auto">
+            <button id="btn-pwa-install" class="glass-panel px-3 h-11 rounded-full flex items-center gap-1.5 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/20 transition shadow-lg hidden" title="Instalar Aplicativo PWA">
+                <i class="fa-solid fa-download"></i>
+                <span class="text-xs font-bold uppercase hidden sm:inline">Instalar App</span>
+            </button>
+
+            <button id="btn-fullscreen" class="glass-panel w-11 h-11 rounded-full flex items-center justify-center text-gray-200 hover:text-white hover:bg-white/10 transition shadow-lg" title="Tela Cheia">
+                <i class="fa-solid fa-expand text-lg"></i>
+            </button>
+
+            <button id="btn-sound" class="glass-panel w-11 h-11 rounded-full flex items-center justify-center text-gray-200 hover:text-white hover:bg-white/10 transition shadow-lg" title="Som Ligar/Desligar">
+                <i class="fa-solid fa-volume-high text-lg"></i>
+            </button>
+
+            <button id="btn-leaderboard-open" class="glass-panel w-11 h-11 rounded-full flex items-center justify-center text-yellow-400 hover:bg-yellow-500/20 transition shadow-lg" title="Ver Ranking de Jogadores">
+                <i class="fa-solid fa-trophy text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Controls Overlay & LED Advertising Slideshow -->
+    <div id="controls-overlay" class="absolute bottom-0 left-0 right-0 p-3 md:p-5 pointer-events-none z-10 flex flex-col gap-3 justify-end items-center hidden">
+       
+        <!-- Virtual Joystick & Action Grab Button -->
+        <div class="w-full max-w-2xl flex justify-between items-end">
+            <!-- On-Screen Virtual Joystick -->
+            <div class="pointer-events-auto flex flex-col items-center">
+                <div id="joystick-zone" class="w-28 h-28 md:w-36 md:h-36 rounded-full glass-panel border-2 border-cyan-500/40 relative flex items-center justify-center shadow-2xl">
+                    <div id="joystick-handle" class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-tr from-cyan-600 to-blue-400 border-2 border-white shadow-md absolute cursor-pointer"></div>
+                </div>
+                <span class="text-[10px] text-cyan-300 font-extrabold tracking-widest uppercase mt-1 opacity-90">Joystick Mover</span>
+            </div>
+
+            <!-- Desktop Keyboard Controls Info -->
+            <div class="hidden md:flex flex-col items-center glass-panel px-4 py-2 rounded-2xl border-white/10 text-xs text-gray-300 shadow-xl">
+                <div class="flex gap-1 mb-1">
+                    <span class="px-2 py-0.5 bg-gray-700/80 rounded border border-gray-600 font-mono font-bold">W</span>
+                    <span class="px-2 py-0.5 bg-gray-700/80 rounded border border-gray-600 font-mono font-bold">A</span>
+                    <span class="px-2 py-0.5 bg-gray-700/80 rounded border border-gray-600 font-mono font-bold">S</span>
+                    <span class="px-2 py-0.5 bg-gray-700/80 rounded border border-gray-600 font-mono font-bold">D</span>
+                </div>
+                <span>Mover Garra | <strong class="text-pink-400">ESPAÇO</strong> = PEGAR</span>
+            </div>
+
+            <!-- Claw Drop Fire Button -->
+            <div class="pointer-events-auto flex flex-col items-center">
+                <button id="btn-drop" class="arcade-btn w-20 h-20 md:w-24 md:h-24 rounded-full bg-gradient-to-tr from-pink-600 to-rose-500 text-white font-black text-base md:text-lg flex flex-col items-center justify-center border-4 border-pink-300 cursor-pointer active:scale-95 transition">
+                    <i class="fa-solid fa-hand-grab-gesture text-xl mb-0.5"></i>
+                    <span>PEGAR</span>
+                </button>
+                <span class="text-[10px] text-pink-300 font-extrabold tracking-widest uppercase mt-1 opacity-90">Disparar Garra</span>
+            </div>
+        </div>
+
+        <!-- Editable LED Mini Screen (Miter Táxi, @carlamitertech, @clenilson_bass) -->
+        <div class="w-full max-w-2xl pointer-events-auto">
+            <div class="led-screen rounded-2xl p-2.5 relative flex items-center justify-between gap-2 overflow-hidden">
+                <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.3)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40"></div>
+
+                <div class="flex items-center gap-2 z-10 pl-1 shrink-0">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                    <i id="ad-slide-icon" class="fa-solid fa-taxi text-yellow-400 text-base md:text-lg"></i>
+                </div>
+
+                <!-- Animated Slide Content -->
+                <div class="flex-1 overflow-hidden z-10 text-center px-2">
+                    <p id="ad-slide-text" class="slide-text-anim text-xs md:text-sm font-black tracking-wide text-emerald-300 font-mono">
+                        🚖 Miter Táxi - Transporte rápido, seguro e confiável!
+                    </p>
+                </div>
+
+                <!-- Slide Index & Real-time Edit Button -->
+                <div class="flex items-center gap-2 z-10 pr-1 shrink-0">
+                    <span id="ad-slide-index" class="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">1/3</span>
+                    <button id="btn-edit-ad" class="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 hover:text-white border border-emerald-500/40 transition text-xs" title="Editar Slides de Propaganda">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Modal / Player Setup -->
+    <div id="modal-start" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 border-pink-500/40 shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white text-4xl shadow-lg mb-4 neon-border">
+                🤩
+            </div>
+
+            <h1 class="text-3xl md:text-4xl font-black tracking-wide bg-gradient-to-r from-yellow-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent mb-1">
+                CLAW ARCADE 3D PWA
+            </h1>
+            <p class="text-gray-300 text-xs md:text-sm mb-6">
+                Pegue os emojis do WhatsApp, acumule pontos e vença todas as fases no Arcade do Shopping!
+            </p>
+
+            <form id="form-start" class="w-full flex flex-col gap-4">
+                <div class="text-left w-full">
+                    <label class="block text-xs font-bold text-pink-300 uppercase tracking-wider mb-2">Nome do Jogador</label>
+                    <input type="text" id="input-player-name" required maxlength="15" placeholder="Digite seu nome..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/30 transition text-center font-bold text-lg">
+                </div>
+
+                <button type="submit" class="w-full py-4 bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-black rounded-2xl shadow-xl shadow-pink-500/25 tracking-wider text-lg uppercase transition transform active:scale-95 border border-pink-400/30 mt-1">
+                    <i class="fa-solid fa-play mr-2"></i> Iniciar Jogada
+                </button>
+            </form>
+
+            <div class="flex gap-4 mt-4 text-xs">
+                <button id="btn-modal-pwa" class="text-emerald-400 hover:text-emerald-300 font-bold hidden flex items-center gap-1">
+                    <i class="fa-solid fa-download"></i> Instalar Aplicativo
+                </button>
+                <button id="btn-leaderboard-modal" class="text-gray-400 hover:text-white underline transition">
+                    Ver Ranking (High Scores)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Advertisements Modal -->
+    <div id="modal-edit-ad" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 border-emerald-500/50 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-700">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-emerald-400 text-xl"></i>
+                    <h3 class="text-xl font-black text-white">Editar Slides de Propaganda</h3>
+                </div>
+                <button id="btn-close-edit-ad" class="text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <p class="text-xs text-gray-400 my-3">
+                Edite ou adicione anúncios para passar no visor digital da máquina:
+            </p>
+
+            <div id="ad-list-container" class="space-y-2.5 overflow-y-auto max-h-60 pr-1 my-2"></div>
+
+            <div class="flex gap-2 mt-3">
+                <button id="btn-add-ad-row" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1">
+                    <i class="fa-solid fa-plus"></i> Adicionar Anúncio
+                </button>
+            </div>
+
+            <div class="flex gap-3 justify-end mt-6 pt-3 border-t border-gray-700/60">
+                <button id="btn-save-ads" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-xl shadow-lg transition tracking-wide uppercase">
+                    <i class="fa-solid fa-check mr-1"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Level Complete Modal -->
+    <div id="modal-level-complete" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 text-center border-emerald-500/40 shadow-2xl flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 text-3xl flex items-center justify-center mb-3 border border-emerald-500/40">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="text-2xl font-black text-emerald-400 mb-1">FASE CONCLUÍDA!</h2>
+            <p class="text-gray-300 text-xs mb-4">Parabéns! Você atingiu a meta de pontos!</p>
+
+            <div class="w-full glass-panel rounded-2xl p-3 mb-5 border-white/5 text-sm space-y-1.5">
+                <div class="flex justify-between text-gray-400">
+                    <span>Pontuação Acumulada:</span>
+                    <span class="text-yellow-400 font-bold" id="level-complete-score">0</span>
+                </div>
+            </div>
+
+            <button id="btn-next-level" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-xl shadow-lg transition tracking-wide uppercase">
+                Próxima Fase <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="modal-game-over" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 text-center border-rose-500/40 shadow-2xl flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-rose-500/20 text-rose-400 text-3xl flex items-center justify-center mb-3 border border-rose-500/40">
+                <i class="fa-solid fa-gamepad"></i>
+            </div>
+            <h2 class="text-2xl font-black text-rose-400 mb-1">FIM DE JOGO</h2>
+            <p class="text-gray-300 text-xs mb-4">Suas fichas acabaram nesta fase!</p>
+
+            <div class="w-full glass-panel rounded-2xl p-3 mb-5 border-white/5 text-sm space-y-1.5">
+                <div class="flex justify-between text-gray-400">
+                    <span>Pontuação Final:</span>
+                    <span class="text-yellow-400 font-bold" id="game-over-score">0</span>
+                </div>
+                <div class="flex justify-between text-gray-400">
+                    <span>Fase Alcançada:</span>
+                    <span class="text-white font-bold" id="game-over-stage">Fase 1</span>
+                </div>
+            </div>
+
+            <button id="btn-restart" class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-black rounded-xl shadow-lg transition tracking-wide uppercase">
+                Jogar Novamente <i class="fa-solid fa-rotate-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="modal-leaderboard" class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-6 border-yellow-500/40 shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-700">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-trophy text-yellow-400 text-xl"></i>
+                    <h3 class="text-xl font-black text-white">Ranking de Jogadores</h3>
+                </div>
+                <button id="btn-close-leaderboard" class="text-gray-400 hover:text-white p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="overflow-y-auto my-4 pr-1 space-y-2 flex-1" id="leaderboard-list"></div>
+
+            <button id="btn-clear-scores" class="text-xs text-gray-500 hover:text-rose-400 transition text-center py-2">
+                Limpar Ranking Local
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast-message" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 glass-panel px-6 py-3 rounded-full border border-pink-500/50 shadow-2xl text-pink-300 font-bold text-sm tracking-wide transition-all transform translate-y-[-100px] opacity-0 pointer-events-none flex items-center gap-2">
+        <i class="fa-solid fa-bell text-pink-400"></i>
+        <span id="toast-text">Notificação</span>
+    </div>
+
     <script>
-        const manifestData = {
-            "name": "Emoji Claw Arcade - Miter Táxi",
-            "short_name": "EmojiClaw",
-            "description": "Jogo 3D de pegar emojis com a garra arcade!",
-            "start_url": "./index.html",
+        /**
+         * PWA REGISTRATION & MANIFEST INJECTION
+         */
+        const pwaManifestData = {
+            "name": "Emoji Claw Machine Arcade 3D",
+            "short_name": "ClawArcade",
+            "description": "Jogo da Máquina de Pegar Emojis do WhatsApp 3D em Arcade de Shopping!",
+            "start_url": "./",
             "display": "standalone",
-            "background_color": "#12131C",
+            "background_color": "#080911",
             "theme_color": "#12131C",
+            "orientation": "portrait-primary",
             "icons": [
                 {
-                    "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text y='.9em' font-size='80'>🕹️</text></svg>",
+                    "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2312131C'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='320'>🤩</text></svg>",
                     "sizes": "192x192 512x512",
                     "type": "image/svg+xml"
                 }
             ]
         };
-        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(manifestBlob);
-        const link = document.createElement('link');
-        link.rel = 'manifest';
-        link.href = manifestURL;
-        document.head.appendChild(link);
-    </script>
 
-    <style>
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; user-select: none;
-            touch-action: manipulation;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0d0e15;
-            color: #fff;
-        }
-        #canvas-container {
-            width: 100%; height: 100%; position: absolute;
-            top: 0; left: 0; z-index: 1;
-        }
-        .hud-layer { z-index: 10; pointer-events: none; }
-        .hud-layer * { pointer-events: auto; }
-       
-        .led-screen {
-            background: #000;
-            border: 2px solid #334155;
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.4), inset 0 0 8px rgba(0,0,0,0.8);
-            font-family: 'Courier New', Courier, monospace;
-        }
-       
-        @keyframes ledScroll {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        .animate-led {
-            display: inline-block;
-            white-space: nowrap;
-            animation: ledScroll 8s linear infinite;
-        }
+        const manifestBlob = new Blob([JSON.stringify(pwaManifestData)], { type: 'application/json' });
+        document.getElementById('pwa-manifest').setAttribute('href', URL.createObjectURL(manifestBlob));
 
-        .joystick-base {
-            width: 110px; height: 110px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #334155 0%, #0f172a 100%);
-            border: 3px solid #64748b;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8), 0 4px 10px rgba(0,0,0,0.5);
-            position: relative; touch-action: none;
-        }
-        .joystick-stick {
-            width: 50px; height: 50px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ef4444 0%, #991b1b 100%);
-            border: 2px solid #fca5a5;
-            position: absolute; top: 30px; left: 30px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.6);
-            transition: transform 0.05s ease-out;
-        }
-
-        .btn-drop {
-            width: 90px; height: 90px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #22c55e 0%, #15803d 100%);
-            border: 4px solid #86efac;
-            box-shadow: 0 6px 0 #166534, 0 10px 15px rgba(0,0,0,0.5);
-            color: white; font-weight: 900; font-size: 1.2rem;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.6);
-            transition: all 0.05s ease;
-        }
-        .btn-drop:active {
-            transform: translateY(4px);
-            box-shadow: 0 2px 0 #166534, 0 4px 6px rgba(0,0,0,0.5);
-        }
-
-        .glass-panel {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-    </style>
-</head>
-<body class="relative flex flex-col justify-between h-screen w-screen overflow-hidden">
-
-    <!-- Container 3D -->
-    <div id="canvas-container"></div>
-
-    <!-- HUD Superior -->
-    <div class="hud-layer absolute top-0 left-0 right-0 p-3 flex justify-between items-start pointer-events-none">
-        <!-- Status do Jogador -->
-        <div class="glass-panel p-3 rounded-xl flex flex-col gap-1 min-w-[160px] shadow-lg">
-            <div class="flex items-center gap-2">
-                <i class="fa-solid fa-user text-indigo-400"></i>
-                <span id="player-display-name" class="font-bold text-sm tracking-wide text-gray-200">Jogador</span>
-            </div>
-            <div class="flex items-center justify-between">
-                <span class="text-xs text-gray-400">Pontos:</span>
-                <span id="score-text" class="text-xl font-extrabold text-yellow-400">0</span>
-            </div>
-            <div class="w-full bg-gray-700 h-2 rounded-full overflow-hidden mt-1">
-                <div id="phase-progress-bar" class="bg-gradient-to-r from-blue-500 to-indigo-500 h-full w-0 transition-all duration-300"></div>
-            </div>
-            <div class="text-[10px] text-gray-400 text-right" id="phase-target-text">Meta: 300 pts</div>
-        </div>
-
-        <!-- Fase / Créditos -->
-        <div class="flex flex-col items-center gap-2">
-            <div class="glass-panel px-4 py-2 rounded-full border border-indigo-500/30 flex items-center gap-2 shadow-lg">
-                <i class="fa-solid fa-trophy text-amber-400 text-xs"></i>
-                <span id="level-title" class="font-bold text-xs uppercase tracking-wider text-indigo-200">Fase 1: Iniciante</span>
-            </div>
-            <div id="pwa-install-badge" class="hidden glass-panel px-3 py-1 rounded-full text-xs text-emerald-400 cursor-pointer flex items-center gap-1.5 border border-emerald-500/40">
-                <i class="fa-solid fa-download"></i>
-                <span>Instalar App</span>
-            </div>
-        </div>
-
-        <!-- Botões de Menu / Ranking -->
-        <div class="flex gap-2">
-            <button id="btn-leaderboard" class="glass-panel w-10 h-10 rounded-xl flex items-center justify-center text-yellow-400 hover:bg-slate-800 transition shadow-lg">
-                <i class="fa-solid fa-ranking-star text-lg"></i>
-            </button>
-            <button id="btn-sound" class="glass-panel w-10 h-10 rounded-xl flex items-center justify-center text-gray-300 hover:bg-slate-800 transition shadow-lg">
-                <i class="fa-solid fa-volume-high text-lg"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- HUD Inferior (Controles + Mini Tela LED) -->
-    <div class="hud-layer absolute bottom-0 left-0 right-0 p-4 flex flex-col items-center gap-3">
-        <!-- Painel Principal de Controle -->
-        <div class="glass-panel w-full max-w-md p-4 rounded-3xl border border-slate-700/60 shadow-2xl flex flex-col gap-3">
-           
-            <!-- Joystick + Botão de Disparo -->
-            <div class="flex justify-between items-center px-4 py-1">
-                <!-- Joystick Direcional Virtual -->
-                <div class="flex flex-col items-center gap-1">
-                    <div id="joystick-container" class="joystick-base">
-                        <div id="joystick-handle" class="joystick-stick"></div>
-                    </div>
-                    <span class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-1">Mover Garra</span>
-                </div>
-
-                <!-- Botão de Pegar -->
-                <div class="flex flex-col items-center gap-1">
-                    <button id="btn-grab" class="btn-drop flex items-center justify-center">
-                        PEGAR
-                    </button>
-                    <span class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-1">Disparo</span>
-                </div>
-            </div>
-
-            <!-- Mini Tela LED de Propaganda (Slideshow Editável) -->
-            <div class="relative w-full rounded-lg p-1 bg-slate-950 border border-slate-800 shadow-inner flex items-center overflow-hidden">
-                <div class="led-screen w-full py-1.5 px-2 rounded flex items-center overflow-hidden relative">
-                    <div id="led-text-container" class="w-full text-emerald-400 font-bold text-xs uppercase tracking-wider">
-                        <span id="led-text" class="animate-led">🚕 MITER TÁXI - TRANSPORTE DE QUALIDADE E CONFIANÇA! 🚖 CADASTRE SEU CONTATO</span>
-                    </div>
-                </div>
-                <!-- Botão de Editar Anúncio -->
-                <button id="btn-edit-ad" class="ml-2 text-slate-400 hover:text-white bg-slate-800 p-1.5 rounded-md text-xs border border-slate-700">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- Modal do Jogador (Boas-vindas) -->
-    <div id="modal-start" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl border border-indigo-500/30 text-center flex flex-col gap-4 shadow-2xl">
-            <div class="w-16 h-16 bg-indigo-600/20 rounded-2xl flex items-center justify-center mx-auto border border-indigo-500/40 text-amber-400 text-3xl shadow-inner">
-                🕹️
-            </div>
-            <h1 class="text-2xl font-black text-white tracking-wide">EMOJI CLAW ARCADE</h1>
-            <p class="text-xs text-gray-300 leading-relaxed">
-                Pegue os emojis do WhatsApp com a garra 3D, faça pontos e avance de fase na galeria do shopping!
-            </p>
-            <div class="flex flex-col gap-2 text-left mt-2">
-                <label class="text-xs text-gray-400 font-semibold uppercase">Seu Nome / Apelido:</label>
-                <input type="text" id="player-name-input" maxlength="15" value="Jogador" class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-            </div>
-            <button id="btn-start-game" class="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl font-bold text-white shadow-lg hover:brightness-110 active:scale-95 transition mt-2">
-                INICIAR JOGO
-            </button>
-        </div>
-    </div>
-
-    <!-- Modal de Editar Anúncios -->
-    <div id="modal-edit-ad" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl border border-slate-700 text-center flex flex-col gap-4 shadow-2xl">
-            <h2 class="text-lg font-bold text-white flex items-center gap-2 justify-center">
-                <i class="fa-solid fa-rectangle-ad text-yellow-400"></i> Editar Banners LED
-            </h2>
-            <p class="text-xs text-gray-300">
-                Altere ou adicione as frases do slide de propaganda que é exibido abaixo do controle:
-            </p>
-            <div id="ad-inputs-container" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
-                <!-- Injetado dinamicamente via JavaScript -->
-            </div>
-            <div class="flex gap-2">
-                <button id="btn-add-ad-line" class="flex-1 py-2 bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-700 border border-slate-700">
-                    + Adicionar Linha
-                </button>
-                <button id="btn-save-ads" class="flex-1 py-2 bg-emerald-600 rounded-xl text-xs font-bold text-white hover:bg-emerald-500">
-                    Salvar
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Ranking / Banco de Dados -->
-    <div id="modal-leaderboard" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-        <div class="glass-panel max-w-md w-full p-6 rounded-3xl border border-slate-700 text-center flex flex-col gap-4 shadow-2xl">
-            <div class="flex justify-between items-center">
-                <h2 class="text-xl font-bold text-yellow-400 flex items-center gap-2">
-                    <i class="fa-solid fa-trophy"></i> Ranking dos Melhores
-                </h2>
-                <button id="btn-close-leaderboard" class="text-gray-400 hover:text-white p-2">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-            <div class="bg-slate-950/80 rounded-2xl border border-slate-800 overflow-hidden max-h-60 overflow-y-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-900 text-gray-400 uppercase">
-                        <tr>
-                            <th class="p-3">#</th>
-                            <th class="p-3">Jogador</th>
-                            <th class="p-3">Fase</th>
-                            <th class="p-3 text-right">Pontos</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-table-body" class="divide-y divide-slate-800/60 text-gray-200">
-                        <!-- Injetado Dinamicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal de Vitória de Fase -->
-    <div id="modal-phase-complete" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl border border-emerald-500/40 text-center flex flex-col gap-4 shadow-2xl">
-            <div class="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto text-emerald-400 text-3xl border border-emerald-500/30">
-                🎉
-            </div>
-            <h2 class="text-2xl font-black text-white">FASE CONCLUÍDA!</h2>
-            <p id="phase-win-message" class="text-xs text-gray-300">Você atingiu a meta de pontuação!</p>
-            <button id="btn-next-phase" class="w-full py-3 bg-emerald-600 rounded-xl font-bold text-white hover:bg-emerald-500 shadow-lg transition">
-                PRÓXIMA FASE
-            </button>
-        </div>
-    </div>
-
-    <!-- CÓDIGO DO JOGO (Three.js + Cannon.js + Lógica) -->
-    <script>
-        // --- REGISTRO DE SERVICE WORKER PARA SUPORTE PWA ---
+        // Inline Service Worker Setup
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'emoji-claw-pwa-v1';
-                self.addEventListener('install', e => {
-                    self.skipWaiting();
+                const CACHE_NAME = 'claw-arcade-v1';
+                const ASSETS = [
+                    './',
+                    'https://cdn.tailwindcss.com',
+                    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+                    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js',
+                    'https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js'
+                ];
+
+                self.addEventListener('install', (e) => {
+                    e.waitUntil(
+                        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+                    );
                 });
-                self.addEventListener('fetch', e => {
+
+                self.addEventListener('fetch', (e) => {
                     e.respondWith(
-                        fetch(e.request).catch(() => caches.match(e.request))
+                        caches.match(e.request).then((res) => res || fetch(e.request))
                     );
                 });
             `;
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+
+            const swBlob = new Blob([swCode], { type: 'text/javascript' });
+            navigator.serviceWorker.register(URL.createObjectURL(swBlob))
+                .then(() => console.log('ServiceWorker PWA Registrado!'))
+                .catch(err => console.log('SW Erro:', err));
         }
 
-        // --- SISTEMA DE AUDIO SINTETIZADO ---
+        // PWA Deferred Prompt Handler
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('btn-pwa-install').classList.remove('hidden');
+            document.getElementById('btn-modal-pwa').classList.remove('hidden');
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showToast("Obrigado por instalar o Claw Arcade!");
+                    }
+                    deferredPrompt = null;
+                    document.getElementById('btn-pwa-install').classList.add('hidden');
+                    document.getElementById('btn-modal-pwa').classList.add('hidden');
+                });
+            }
+        }
+
+        /**
+         * GAME ENGINE & MECHANICS
+         */
+        const STAGE_CONFIGS = [
+            { stage: 1, name: "Fase 1: Iniciante", targetScore: 300, credits: 6, emojiCount: 14 },
+            { stage: 2, name: "Fase 2: Desafio de Precisão", targetScore: 700, credits: 5, emojiCount: 16 },
+            { stage: 3, name: "Fase 3: Caçador de Raros", targetScore: 1200, credits: 5, emojiCount: 18 },
+            { stage: 4, name: "Fase 4: Mestre da Garra", targetScore: 1800, credits: 5, emojiCount: 20 },
+            { stage: 5, name: "Fase 5: Galeria Arcade Infinita", targetScore: 3000, credits: 7, emojiCount: 24 }
+        ];
+
+        const GAME_STATE = {
+            playerName: "Jogador",
+            score: 0,
+            stageIndex: 0,
+            credits: 6,
+            clawState: 'IDLE',
+            soundEnabled: true,
+            plushiesInMachine: [],
+            ads: [
+                { icon: "fa-taxi", text: "🚖 Miter Táxi - Transporte rápido, seguro e confiável!" },
+                { icon: "fa-laptop-code", text: "💻 @carlamitertech - Tecnologia e Inovação!" },
+                { icon: "fa-guitar", text: "🎸 @clenilson_bass - Música e Contrabaixo!" }
+            ],
+            currentAdIndex: 0
+        };
+
+        const WHATSAPP_EMOJIS = [
+            { char: '😀', color: '#facc15', points: 100 },
+            { char: '😎', color: '#eab308', points: 150 },
+            { char: '🤩', color: '#f59e0b', points: 200 },
+            { char: '🥳', color: '#a855f7', points: 250 },
+            { char: '🦁', color: '#d97706', points: 250 },
+            { char: '🐶', color: '#b45309', points: 120 },
+            { char: '🦄', color: '#ec4899', points: 400 },
+            { char: '🤖', color: '#64748b', points: 220 },
+            { char: '👽', color: '#22c55e', points: 300 },
+            { char: '🤡', color: '#ef4444', points: 180 },
+            { char: '👻', color: '#f8fafc', points: 250 },
+            { char: '💩', color: '#78350f', points: 500 },
+            { char: '🚀', color: '#3b82f6', points: 350 },
+            { char: '🔥', color: '#f97316', points: 350 },
+            { char: '❤️', color: '#dc2626', points: 200 },
+            { char: '🎁', color: '#e11d48', points: 300 }
+        ];
+
+        // Sound Effects Synth
         class SoundFX {
-            constructor() {
-                this.ctx = null;
-                this.enabled = true;
-            }
-            init() {
-                if(!this.ctx) {
-                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                }
-            }
-            playBeep(freq = 440, type = 'sine', duration = 0.1) {
-                if(!this.enabled || !this.ctx) return;
+            constructor() { this.ctx = null; }
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+            playTone(freq = 440, type = 'sine', duration = 0.1, volume = 0.1) {
+                if (!GAME_STATE.soundEnabled) return;
+                this.init();
                 try {
                     const osc = this.ctx.createOscillator();
                     const gain = this.ctx.createGain();
                     osc.type = type;
                     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
                     osc.connect(gain);
                     gain.connect(this.ctx.destination);
@@ -335,449 +494,639 @@
                     osc.stop(this.ctx.currentTime + duration);
                 } catch(e){}
             }
-            playWin() {
-                if(!this.enabled) return;
-                [523, 659, 783, 1046].forEach((f, i) => {
-                    setTimeout(() => this.playBeep(f, 'triangle', 0.2), i * 100);
+            playClawMove() { this.playTone(220, 'triangle', 0.04, 0.03); }
+            playDrop() {
+                if (!GAME_STATE.soundEnabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.4);
+                } catch(e){}
+            }
+            playSuccess() {
+                if (!GAME_STATE.soundEnabled) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, idx) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.2, 0.12), idx * 80);
                 });
             }
-            playDrop() {
-                if(!this.enabled) return;
-                this.playBeep(220, 'sawtooth', 0.3);
-            }
         }
-        const sound = new SoundFX();
 
-        // --- DADOS DAS FASES ---
-        const PHASES = [
-            { level: 1, name: "Fase 1: Iniciante", target: 300, EmojisCount: 18 },
-            { level: 2, name: "Fase 2: Desafio", target: 700, EmojisCount: 22 },
-            { level: 3, name: "Fase 3: Emojis Raros", target: 1200, EmojisCount: 25 },
-            { level: 4, name: "Fase 4: Mestre Garra", target: 1800, EmojisCount: 28 },
-            { level: 5, name: "Fase 5: Galeria Infinita", target: 3000, EmojisCount: 32 }
-        ];
+        const sfx = new SoundFX();
 
-        // --- LISTA DE EMOJIS DE PELÚCIA DO WHATSAPP ---
-        const EMOJI_LIST = [
-            { char: '😀', points: 100, color: '#facc15' },
-            { char: '😎', points: 150, color: '#facc15' },
-            { char: '🤩', points: 200, color: '#facc15' },
-            { char: '🦁', points: 250, color: '#f97316' },
-            { char: '🐶', points: 120, color: '#fb923c' },
-            { char: '🦄', points: 500, color: '#f472b6' },
-            { char: '🤖', points: 300, color: '#94a3b8' },
-            { char: '👽', points: 350, color: '#4ade80' },
-            { char: '🤡', points: 180, color: '#f43f5e' },
-            { char: '👻', points: 220, color: '#cbd5e1' },
-            { char: '🎃', points: 280, color: '#fb923c' },
-            { char: '💩', points: 400, color: '#854d0e' },
-            { char: '🚀', points: 450, color: '#38bdf8' },
-            { char: '🔥', points: 300, color: '#ef4444' }
-        ];
-
-        // --- VARIÁVEIS DE ESTADO ---
-        let playerName = "Jogador";
-        let currentScore = 0;
-        let currentPhaseIdx = 0;
-        let adPhrases = [
-            "🚕 MITER TÁXI - CORRIDAS E VIAGENS COM SEGURANÇA E CONFORTO!",
-            "💻 @carlamitertech - TECNOLOGIA, SISTEMAS E SOLUÇÕES DIGITAIS!",
-            "🎸 @clenilson_bass - CONTEÚDO MUSICAL, BASS & DICAS EXCLUSIVAS!"
-        ];
-        let currentAdIdx = 0;
-
-        // --- CONFIGURAÇÃO THREE.JS & CANNON.JS ---
         let scene, camera, renderer, world;
-        let clawMesh, clawBody;
-        let clawPos = { x: 0, y: 3.5, z: 0 };
-        let clawTarget = { x: 0, y: 3.5, z: 0 };
-        let isClawDescending = false;
-        let isClawGrabbing = false;
-        let plushiesList = [];
+        let clawGroup, clawBody, clawCable, clawFingers = [];
+        const MACHINE_BOUNDS = { minX: -2.2, maxX: 1.4, minZ: -2.0, maxZ: 2.0, maxY: 4.8, minY: 0.8 };
+        const CHUTE_POS = { x: 1.8, z: -1.8, y: 1.2 };
+        let clawPos = { x: -0.4, y: MACHINE_BOUNDS.maxY, z: 0 };
+        let grabbedPlushie = null;
+        let physicsMaterials = {};
+        const emojiTextureCache = {};
 
-        // Inicializador principal de renderização
-        function init3D() {
-            const container = document.getElementById('canvas-container');
+        function initEngine() {
+            const canvas = document.getElementById('game-canvas');
            
-            // Cena ThreeJS
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0a0b10);
-            scene.fog = new THREE.FogExp2(0x0a0b10, 0.03);
+            scene.background = new THREE.Color(0x080911);
+            scene.fog = new THREE.FogExp2(0x080911, 0.03);
 
-            // Câmera
             camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-            camera.position.set(0, 4.5, 9);
-            camera.lookAt(0, 2, 0);
+            camera.position.set(0, 3.8, 8.6);
+            camera.lookAt(0, 2.2, 0);
 
-            // Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            container.appendChild(renderer.domElement);
 
-            // Iluminação da Galeria / Máquina
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(ambientLight);
-
-            const spotLight = new THREE.SpotLight(0x6366f1, 2);
-            spotLight.position.set(0, 10, 5);
-            spotLight.angle = Math.PI / 4;
-            spotLight.penumbra = 0.5;
-            spotLight.castShadow = true;
-            scene.add(spotLight);
-
-            const machineLight = new THREE.PointLight(0xfff0c2, 1.5, 8);
-            machineLight.position.set(0, 4.5, 0);
-            scene.add(machineLight);
-
-            // Física Cannon.js
             world = new CANNON.World();
-            world.gravity.set(0, -9.82, 0);
+            world.gravity.set(0, -12, 0);
+            world.broadphase = new CANNON.NaiveBroadphase();
 
-            buildMallEnvironment();
+            physicsMaterials.ground = new CANNON.Material("groundMaterial");
+            physicsMaterials.plushie = new CANNON.Material("plushieMaterial");
+            physicsMaterials.claw = new CANNON.Material("clawMaterial");
+
+            world.addContactMaterial(new CANNON.ContactMaterial(
+                physicsMaterials.ground, physicsMaterials.plushie,
+                { friction: 0.6, restitution: 0.25 }
+            ));
+
+            buildShoppingMallEnvironment();
             buildClawMachine();
-            spawnPlushies(PHASES[currentPhaseIdx].EmojisCount);
 
             window.addEventListener('resize', onWindowResize);
-            animate();
         }
 
-        // Criar Chão e Galeria de Shopping no Fundo
-        function buildMallEnvironment() {
-            // Chão Refletivo
-            const floorGeo = new THREE.PlaneGeometry(30, 30);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.2, metalness: 0.5 });
+        function buildShoppingMallEnvironment() {
+            const floorGeo = new THREE.PlaneGeometry(40, 40);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.15, metalness: 0.6 });
             const floor = new THREE.Mesh(floorGeo, floorMat);
             floor.rotation.x = -Math.PI / 2;
-            floor.position.y = -0.01;
-            floor.receiveShadow = true;
             scene.add(floor);
 
-            // Parede de Fundo Neon
-            const wallGeo = new THREE.PlaneGeometry(30, 15);
-            const wallMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
-            const wall = new THREE.Mesh(wallGeo, wallMat);
-            wall.position.set(0, 7.5, -6);
-            scene.add(wall);
+            const floorBody = new CANNON.Body({ mass: 0, material: physicsMaterials.ground });
+            floorBody.addShape(new CANNON.Plane());
+            floorBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+            world.addBody(floorBody);
+
+            for (let i = -3; i <= 3; i += 2) {
+                const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 12, 0.8), new THREE.MeshStandardMaterial({ color: 0x1e293b }));
+                pillar.position.set(i * 4, 6, -10);
+                scene.add(pillar);
+
+                const neon = new THREE.Mesh(new THREE.BoxGeometry(0.1, 10, 0.85), new THREE.MeshBasicMaterial({ color: i % 4 === 0 ? 0xec4899 : 0x06b6d4 }));
+                neon.position.set(i * 4, 6, -9.95);
+                scene.add(neon);
+            }
+
+            scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+            const mainSpot = new THREE.SpotLight(0xffffff, 1.3);
+            mainSpot.position.set(5, 12, 8);
+            scene.add(mainSpot);
         }
 
-        // Criar Textura 3D do Emoji para Pelúcia
+        function buildClawMachine() {
+            const machineGroup = new THREE.Group();
+
+            const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.0, 5.2), new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.7 }));
+            baseMesh.position.y = 1.0;
+            machineGroup.add(baseMesh);
+
+            const trayMesh = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.2, 4.8), new THREE.MeshStandardMaterial({ color: 0x334155 }));
+            trayMesh.position.y = 2.0;
+            machineGroup.add(trayMesh);
+
+            const trayBody = new CANNON.Body({ mass: 0, material: physicsMaterials.ground });
+            trayBody.addShape(new CANNON.Box(new CANNON.Vec3(2.4, 0.1, 2.4)));
+            trayBody.position.set(0, 2.0, 0);
+            world.addBody(trayBody);
+
+            const topMesh = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.2, 5.2), new THREE.MeshStandardMaterial({ color: 0xbe185d }));
+            topMesh.position.y = 5.8;
+            machineGroup.add(topMesh);
+
+            const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.22, roughness: 0.1, transmission: 0.9 });
+            const glassBack = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 3.6), glassMat);
+            glassBack.position.set(0, 3.9, -2.4);
+            machineGroup.add(glassBack);
+
+            const createWallBody = (x, y, z, hx, hy, hz) => {
+                const wall = new CANNON.Body({ mass: 0, material: physicsMaterials.ground });
+                wall.addShape(new CANNON.Box(new CANNON.Vec3(hx, hy, hz)));
+                wall.position.set(x, y, z);
+                world.addBody(wall);
+            };
+            createWallBody(0, 3.5, -2.4, 2.5, 1.5, 0.1);
+            createWallBody(-2.4, 3.5, 0, 0.1, 1.5, 2.5);
+            createWallBody(2.4, 3.5, 0, 0.1, 1.5, 2.5);
+            createWallBody(0, 3.5, 2.4, 2.5, 1.5, 0.1);
+
+            const chuteMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x0f172a }));
+            chuteMesh.position.set(CHUTE_POS.x, 2.5, CHUTE_POS.z);
+            machineGroup.add(chuteMesh);
+
+            scene.add(machineGroup);
+            buildClawAssembly();
+        }
+
+        function buildClawAssembly() {
+            clawGroup = new THREE.Group();
+
+            clawGroup.add(new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.2, 0.8), new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8 })));
+
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, -1.5, 0)]);
+            clawCable = new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: 0x1e293b, linewidth: 3 }));
+            clawGroup.add(clawCable);
+
+            const hubMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.3, 16), new THREE.MeshStandardMaterial({ color: 0xec4899, metalness: 0.6 }));
+            hubMesh.position.y = -1.5;
+            clawGroup.add(hubMesh);
+
+            clawFingers = [];
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * Math.PI * 2) / 3;
+                const fingerGroup = new THREE.Group();
+                fingerGroup.position.set(Math.cos(angle) * 0.25, -1.6, Math.sin(angle) * 0.25);
+                fingerGroup.rotation.y = -angle;
+
+                const armMesh = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.5, 0.08), new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9 }));
+                armMesh.position.set(0.12, -0.2, 0);
+                armMesh.rotation.z = -0.4;
+                fingerGroup.add(armMesh);
+
+                clawGroup.add(fingerGroup);
+                clawFingers.push(fingerGroup);
+            }
+
+            clawGroup.position.set(clawPos.x, clawPos.y, clawPos.z);
+            scene.add(clawGroup);
+
+            clawBody = new CANNON.Body({ mass: 0, material: physicsMaterials.claw });
+            clawBody.addShape(new CANNON.Sphere(0.4));
+            clawBody.position.set(clawPos.x, clawPos.y - 1.5, clawPos.z);
+            world.addBody(clawBody);
+        }
+
         function createEmojiTexture(emojiChar, bgColor) {
+            if (emojiTextureCache[emojiChar]) return emojiTextureCache[emojiChar];
+
             const canvas = document.createElement('canvas');
             canvas.width = 256; canvas.height = 256;
             const ctx = canvas.getContext('2d');
 
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = bgColor || '#facc15';
+            ctx.beginPath();
+            ctx.arc(128, 128, 124, 0, Math.PI * 2);
+            ctx.fill();
 
-            ctx.font = '150px serif';
+            ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+            ctx.lineWidth = 8;
+            ctx.stroke();
+
+            ctx.font = '130px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(emojiChar, 128, 138);
 
-            return new THREE.CanvasTexture(canvas);
+            const texture = new THREE.CanvasTexture(canvas);
+            emojiTextureCache[emojiChar] = texture;
+            return texture;
         }
 
-        // Estrutura Visual da Máquina de Arcade
-        function buildClawMachine() {
-            const machineGroup = new THREE.Group();
+        function createEmojiPlushie(emojiDef, x, y, z) {
+            const plushieGroup = new THREE.Group();
+            const texture = createEmojiTexture(emojiDef.char, emojiDef.color);
+            const material = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.3, metalness: 0.1 });
 
-            // Cabinet Base
-            const baseGeo = new THREE.BoxGeometry(4.2, 2, 4.2);
-            const baseMat = new THREE.MeshStandardMaterial({ color: 0x312e81, metalness: 0.3, roughness: 0.4 });
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.position.y = 1;
-            base.castShadow = true;
-            base.receiveShadow = true;
-            machineGroup.add(base);
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.36, 24, 24), material);
+            bodyMesh.rotation.y = Math.PI / 2;
+            plushieGroup.add(bodyMesh);
 
-            // Chão do Vidro (Prêmio)
-            const prizeFloorGeo = new THREE.BoxGeometry(3.8, 0.2, 3.8);
-            const prizeFloorMat = new THREE.MeshStandardMaterial({ color: 0x1e1b4b });
-            const prizeFloor = new THREE.Mesh(prizeFloorGeo, prizeFloorMat);
-            prizeFloor.position.y = 2.1;
-            machineGroup.add(prizeFloor);
+            plushieGroup.position.set(x, y, z);
+            scene.add(plushieGroup);
 
-            // Física do Chão
-            const floorShape = new CANNON.Box(new CANNON.Vec3(1.9, 0.1, 1.9));
-            const floorBody = new CANNON.Body({ mass: 0 });
-            floorBody.addShape(floorShape);
-            floorBody.position.set(0, 2.1, 0);
-            world.addBody(floorBody);
+            const pBody = new CANNON.Body({ mass: 0.8, material: physicsMaterials.plushie, linearDamping: 0.4, angularDamping: 0.4 });
+            pBody.addShape(new CANNON.Sphere(0.36));
+            pBody.position.set(x, y, z);
+            world.addBody(pBody);
 
-            // Paredes de Vidro da Máquina
-            const glassMat = new THREE.MeshPhysicalMaterial({
-                color: 0xffffff, transparent: true, opacity: 0.2, roughness: 0.1, transmission: 0.9
-            });
-            const glassGeo = new THREE.BoxGeometry(3.9, 3, 3.9);
-            const glass = new THREE.Mesh(glassGeo, glassMat);
-            glass.position.y = 3.6;
-            machineGroup.add(glass);
-
-            // Garra (Cabeça Mecânica)
-            const clawGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 16);
-            const clawMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8, roughness: 0.2 });
-            clawMesh = new THREE.Mesh(clawGeo, clawMat);
-            clawMesh.position.set(0, 4.8, 0);
-            machineGroup.add(clawMesh);
-
-            scene.add(machineGroup);
+            GAME_STATE.plushiesInMachine.push({ mesh: plushieGroup, body: pBody, def: emojiDef, captured: false });
         }
 
-        // Gerar Pelúcias de Emojis dentro da Máquina
-        function spawnPlushies(count) {
-            // Limpar existentes
-            plushiesList.forEach(p => {
+        function spawnStagePlushies() {
+            GAME_STATE.plushiesInMachine.forEach(p => {
                 scene.remove(p.mesh);
                 world.remove(p.body);
             });
-            plushiesList = [];
+            GAME_STATE.plushiesInMachine = [];
 
-            const sphereGeo = new THREE.SphereGeometry(0.3, 24, 24);
-
-            for(let i = 0; i < count; i++) {
-                const emojiData = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
-                const texture = createEmojiTexture(emojiData.char, emojiData.color);
-                const mat = new THREE.MeshStandardMaterial({ map: texture, roughness: 0.6 });
-
-                const mesh = new THREE.Mesh(sphereGeo, mat);
-                mesh.castShadow = true;
-
-                // Posição inicial com distribuição
-                const rx = (Math.random() - 0.5) * 2.8;
-                const rz = (Math.random() - 0.5) * 2.8;
-                const ry = 2.5 + Math.random() * 1.5;
-
-                mesh.position.set(rx, ry, rz);
-                scene.add(mesh);
-
-                // Física da esfera
-                const shape = new CANNON.Sphere(0.3);
-                const body = new CANNON.Body({ mass: 1, restitution: 0.3 });
-                body.addShape(shape);
-                body.position.set(rx, ry, rz);
-                world.addBody(body);
-
-                plushiesList.push({ mesh, body, data: emojiData });
+            const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
+            for (let i = 0; i < currentCfg.emojiCount; i++) {
+                const emoji = WHATSAPP_EMOJIS[i % WHATSAPP_EMOJIS.length];
+                const rx = (Math.random() - 0.5) * 3.2;
+                const rz = (Math.random() - 0.5) * 3.2;
+                const ry = 2.4 + (i * 0.22);
+                createEmojiPlushie(emoji, rx, ry, rz);
             }
         }
 
-        // --- CONTROLES DE JOYSTICK VIRTUAL ---
-        const joystickContainer = document.getElementById('joystick-container');
-        const joystickHandle = document.getElementById('joystick-handle');
+        // Joystick & Keyboard Controls
         let joystickActive = false;
+        let joystickVector = { x: 0, y: 0 };
 
-        function handleJoystickMove(evt) {
-            if(!joystickActive || isClawDescending) return;
-            const touch = evt.touches ? evt.touches[0] : evt;
-            const rect = joystickContainer.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
+        function initControls() {
+            const joystickZone = document.getElementById('joystick-zone');
+            const joystickHandle = document.getElementById('joystick-handle');
 
-            let deltaX = touch.clientX - centerX;
-            let deltaY = touch.clientY - centerY;
-            const dist = Math.hypot(deltaX, deltaY);
-            const maxRadius = 35;
+            const handleMove = (clientX, clientY) => {
+                if (!joystickActive) return;
+                const rect = joystickZone.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+               
+                let dx = clientX - centerX;
+                let dy = clientY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const maxRadius = rect.width / 2 - 20;
 
-            if(dist > maxRadius) {
-                deltaX = (deltaX / dist) * maxRadius;
-                deltaY = (deltaY / dist) * maxRadius;
-            }
+                if (distance > maxRadius) {
+                    dx = (dx / distance) * maxRadius;
+                    dy = (dy / distance) * maxRadius;
+                }
 
-            joystickHandle.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                joystickHandle.style.transform = `translate(${dx}px, ${dy}px)`;
+                joystickVector.x = dx / maxRadius;
+                joystickVector.y = dy / maxRadius;
+            };
 
-            // Mover Garra suavemente
-            const speed = 0.04;
-            clawTarget.x = Math.max(-1.5, Math.min(1.5, clawTarget.x + (deltaX / maxRadius) * speed));
-            clawTarget.z = Math.max(-1.5, Math.min(1.5, clawTarget.z + (deltaY / maxRadius) * speed));
+            const startJoystick = (e) => {
+                joystickActive = true;
+                const touch = e.touches ? e.touches[0] : e;
+                handleMove(touch.clientX, touch.clientY);
+            };
+
+            const stopJoystick = () => {
+                joystickActive = false;
+                joystickVector = { x: 0, y: 0 };
+                joystickHandle.style.transform = `translate(0px, 0px)`;
+            };
+
+            joystickZone.addEventListener('mousedown', startJoystick);
+            window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+            window.addEventListener('mouseup', stopJoystick);
+
+            joystickZone.addEventListener('touchstart', startJoystick, { passive: true });
+            window.addEventListener('touchmove', (e) => {
+                if (e.touches && e.touches[0]) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }, { passive: true });
+            window.addEventListener('touchend', stopJoystick);
+
+            const keys = {};
+            window.addEventListener('keydown', (e) => {
+                keys[e.key.toLowerCase()] = true;
+                if (e.code === 'Space') { e.preventDefault(); triggerClawDrop(); }
+            });
+            window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+            setInterval(() => {
+                if (GAME_STATE.clawState !== 'IDLE') return;
+
+                let kx = 0; let ky = 0;
+                if (keys['a'] || keys['arrowleft']) kx -= 1;
+                if (keys['d'] || keys['arrowright']) kx += 1;
+                if (keys['w'] || keys['arrowup']) ky -= 1;
+                if (keys['s'] || keys['arrowdown']) ky += 1;
+
+                if (kx !== 0 || ky !== 0) {
+                    moveClaw(kx * 0.05, ky * 0.05);
+                } else if (joystickActive) {
+                    moveClaw(joystickVector.x * 0.05, joystickVector.y * 0.05);
+                }
+            }, 16);
+
+            document.getElementById('btn-drop').addEventListener('click', triggerClawDrop);
         }
 
-        joystickContainer.addEventListener('pointerdown', (e) => {
-            joystickActive = true;
-            sound.init();
-            handleJoystickMove(e);
-        });
-        window.addEventListener('pointermove', handleJoystickMove);
-        window.addEventListener('pointerup', () => {
-            joystickActive = false;
-            joystickHandle.style.transform = `translate(0px, 0px)`;
-        });
+        function moveClaw(dx, dz) {
+            if (GAME_STATE.clawState !== 'IDLE') return;
 
-        // Botão Disparo da Garra
-        document.getElementById('btn-grab').addEventListener('click', () => {
-            sound.init();
-            if(isClawDescending) return;
-            isClawDescending = true;
-            sound.playDrop();
+            clawPos.x = Math.max(MACHINE_BOUNDS.minX, Math.min(MACHINE_BOUNDS.maxX, clawPos.x + dx));
+            clawPos.z = Math.max(MACHINE_BOUNDS.minZ, Math.min(MACHINE_BOUNDS.maxZ, clawPos.z + dz));
 
-            // Animação de descida e subida da garra
-            let descentInterval = setInterval(() => {
-                clawTarget.y -= 0.05;
-                if(clawTarget.y <= 2.5) {
-                    clearInterval(descentInterval);
-                    checkGrabPrize();
+            clawGroup.position.x = clawPos.x;
+            clawGroup.position.z = clawPos.z;
+            clawBody.position.x = clawPos.x;
+            clawBody.position.z = clawPos.z;
 
-                    // Subir Garra
-                    let ascentInterval = setInterval(() => {
-                        clawTarget.y += 0.05;
-                        if(clawTarget.y >= 4.8) {
-                            clearInterval(ascentInterval);
-                            isClawDescending = false;
+            sfx.playClawMove();
+        }
+
+        function triggerClawDrop() {
+            if (GAME_STATE.clawState !== 'IDLE' || GAME_STATE.credits <= 0) return;
+
+            GAME_STATE.credits--;
+            updateUI();
+            GAME_STATE.clawState = 'LOWERING';
+            sfx.playDrop();
+
+            let targetY = MACHINE_BOUNDS.minY + 0.3;
+
+            const dropInterval = setInterval(() => {
+                if (clawPos.y > targetY && GAME_STATE.clawState === 'LOWERING') {
+                    clawPos.y -= 0.08;
+                    updateClawVisuals();
+
+                    for (let p of GAME_STATE.plushiesInMachine) {
+                        const dist = clawGroup.position.distanceTo(p.mesh.position);
+                        if (dist < 0.75) {
+                            clearInterval(dropInterval);
+                            executeGrab(p);
+                            return;
                         }
-                    }, 30);
+                    }
+                } else {
+                    clearInterval(dropInterval);
+                    executeGrab(null);
+                }
+            }, 20);
+        }
+
+        function updateClawVisuals() {
+            clawGroup.position.y = clawPos.y;
+            clawBody.position.y = clawPos.y - 1.5;
+
+            const lineLength = MACHINE_BOUNDS.maxY - clawPos.y + 1.5;
+            const positions = clawCable.geometry.attributes.position.array;
+            positions[4] = -lineLength;
+            clawCable.geometry.attributes.position.needsUpdate = true;
+        }
+
+        function executeGrab(targetPlushie) {
+            GAME_STATE.clawState = 'GRABBING';
+
+            let fingerAngle = 0;
+            const grabInterval = setInterval(() => {
+                fingerAngle += 0.05;
+                clawFingers.forEach(f => { f.rotation.z = fingerAngle; });
+
+                if (fingerAngle >= 0.4) {
+                    clearInterval(grabInterval);
+                   
+                    if (targetPlushie) {
+                        const successChance = 0.75 + (GAME_STATE.stageIndex * 0.03);
+                        if (Math.random() < successChance) {
+                            grabbedPlushie = targetPlushie;
+                            showToast(`Agarrou ${targetPlushie.def.char} (${targetPlushie.def.points} pts)!`);
+                        } else {
+                            showToast("Escorregou! Tente novamente.");
+                        }
+                    }
+
+                    raiseClaw();
                 }
             }, 30);
-        });
+        }
 
-        // Verificar e Pegar Pelúcia
-        function checkGrabPrize() {
-            plushiesList.forEach((plush, idx) => {
-                const dist = Math.hypot(clawMesh.position.x - plush.mesh.position.x, clawMesh.position.z - plush.mesh.position.z);
-                if(dist < 0.5) {
-                    // Impulso para pegar o emoji
-                    plush.body.velocity.set(0, 5, 0);
-                    currentScore += plush.data.points;
-                    sound.playWin();
+        function raiseClaw() {
+            GAME_STATE.clawState = 'RAISING';
 
-                    // Atualizar HUD
-                    document.getElementById('score-text').innerText = currentScore;
-                    updateProgressBar();
+            const raiseInterval = setInterval(() => {
+                if (clawPos.y < MACHINE_BOUNDS.maxY) {
+                    clawPos.y += 0.06;
+                    updateClawVisuals();
+
+                    if (grabbedPlushie) {
+                        grabbedPlushie.body.position.set(clawPos.x, clawPos.y - 1.8, clawPos.z);
+                        grabbedPlushie.body.velocity.set(0, 0, 0);
+                    }
+                } else {
+                    clearInterval(raiseInterval);
+                    returnToChute();
                 }
-            });
+            }, 20);
         }
 
-        function updateProgressBar() {
-            const target = PHASES[currentPhaseIdx].target;
-            const pct = Math.min(100, (currentScore / target) * 100);
-            document.getElementById('phase-progress-bar').style.width = `${pct}%`;
+        function returnToChute() {
+            GAME_STATE.clawState = 'RETURNING';
 
-            if(currentScore >= target) {
-                setTimeout(showPhaseWinModal, 500);
+            const returnInterval = setInterval(() => {
+                const dx = CHUTE_POS.x - clawPos.x;
+                const dz = CHUTE_POS.z - clawPos.z;
+                const dist = Math.sqrt(dx * dx + dz * dz);
+
+                if (dist > 0.1) {
+                    clawPos.x += (dx / dist) * 0.06;
+                    clawPos.z += (dz / dist) * 0.06;
+                    clawGroup.position.x = clawPos.x;
+                    clawGroup.position.z = clawPos.z;
+
+                    if (grabbedPlushie) {
+                        grabbedPlushie.body.position.set(clawPos.x, clawPos.y - 1.8, clawPos.z);
+                    }
+                } else {
+                    clearInterval(returnInterval);
+                    dropPrizeIntoChute();
+                }
+            }, 20);
+        }
+
+        function dropPrizeIntoChute() {
+            GAME_STATE.clawState = 'DROPPING';
+            clawFingers.forEach(f => f.rotation.z = 0);
+
+            if (grabbedPlushie) {
+                grabbedPlushie.body.velocity.set(0, -5, 0);
+               
+                setTimeout(() => {
+                    sfx.playSuccess();
+                    confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
+
+                    GAME_STATE.score += grabbedPlushie.def.points;
+                    grabbedPlushie.captured = true;
+
+                    showToast(`+${grabbedPlushie.def.points} PONTOS! ${grabbedPlushie.def.char} Coletado!`);
+
+                    scene.remove(grabbedPlushie.mesh);
+                    world.remove(grabbedPlushie.body);
+                    grabbedPlushie = null;
+
+                    updateUI();
+                    checkStageProgress();
+
+                    GAME_STATE.clawState = 'IDLE';
+                }, 600);
+            } else {
+                GAME_STATE.clawState = 'IDLE';
+                checkStageProgress();
             }
         }
 
-        function showPhaseWinModal() {
-            document.getElementById('modal-phase-complete').classList.remove('hidden');
-            saveScoreToDatabase();
-        }
+        function checkStageProgress() {
+            const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
 
-        document.getElementById('btn-next-phase').addEventListener('click', () => {
-            document.getElementById('modal-phase-complete').classList.add('hidden');
-            if(currentPhaseIdx < PHASES.length - 1) {
-                currentPhaseIdx++;
-                document.getElementById('level-title').innerText = PHASES[currentPhaseIdx].name;
-                document.getElementById('phase-target-text').innerText = `Meta: ${PHASES[currentPhaseIdx].target} pts`;
-                spawnPlushies(PHASES[currentPhaseIdx].EmojisCount);
-                updateProgressBar();
+            if (GAME_STATE.score >= currentCfg.targetScore) {
+                setTimeout(() => {
+                    document.getElementById('level-complete-score').innerText = GAME_STATE.score;
+                    document.getElementById('modal-level-complete').classList.remove('hidden');
+                    saveScoreLocal();
+                }, 800);
+            } else if (GAME_STATE.credits <= 0) {
+                setTimeout(() => {
+                    document.getElementById('game-over-score').innerText = GAME_STATE.score;
+                    document.getElementById('game-over-stage').innerText = currentCfg.name;
+                    document.getElementById('modal-game-over').classList.remove('hidden');
+                    saveScoreLocal();
+                }, 800);
             }
-        });
-
-        // --- SISTEMA DE ANÚNCIOS LED SLIDESHOW ---
-        function updateAdSlide() {
-            const ledTextEl = document.getElementById('led-text');
-            ledTextEl.innerText = adPhrases[currentAdIdx];
-            currentAdIdx = (currentAdIdx + 1) % adPhrases.length;
-        }
-        setInterval(updateAdSlide, 8000);
-
-        // Modal de Edição dos Anúncios
-        document.getElementById('btn-edit-ad').addEventListener('click', () => {
-            const container = document.getElementById('ad-inputs-container');
-            container.innerHTML = '';
-            adPhrases.forEach((phrase, idx) => {
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.value = phrase;
-                input.className = 'w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white my-1';
-                input.dataset.idx = idx;
-                container.appendChild(input);
-            });
-            document.getElementById('modal-edit-ad').classList.remove('hidden');
-        });
-
-        document.getElementById('btn-save-ads').addEventListener('click', () => {
-            const inputs = document.querySelectorAll('#ad-inputs-container input');
-            adPhrases = Array.from(inputs).map(i => i.value).filter(v => v.trim() !== '');
-            document.getElementById('modal-edit-ad').classList.add('hidden');
-            updateAdSlide();
-        });
-
-        // --- BANCO DE DADOS LOCAL (RANKING / LOCALSTORAGE) ---
-        function saveScoreToDatabase() {
-            let leaderboard = JSON.parse(localStorage.getItem('claw_leaderboard') || '[]');
-            leaderboard.push({
-                name: playerName,
-                score: currentScore,
-                phase: PHASES[currentPhaseIdx].name,
-                date: new Date().toLocaleDateString()
-            });
-            leaderboard.sort((a,b) => b.score - a.score);
-            leaderboard = leaderboard.slice(0, 10);
-            localStorage.setItem('claw_leaderboard', JSON.stringify(leaderboard));
         }
 
-        function renderLeaderboard() {
-            const tbody = document.getElementById('leaderboard-table-body');
-            tbody.innerHTML = '';
-            const leaderboard = JSON.parse(localStorage.getItem('claw_leaderboard') || '[]');
-           
-            if(leaderboard.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">Nenhuma pontuação registrada ainda.</td></tr>';
+        // Advertisement Banner Slideshow
+        function startAdSlideshow() {
+            setInterval(() => {
+                if (GAME_STATE.ads.length === 0) return;
+                GAME_STATE.currentAdIndex = (GAME_STATE.currentAdIndex + 1) % GAME_STATE.ads.length;
+                updateAdDisplay();
+            }, 4500);
+        }
+
+        function updateAdDisplay() {
+            const adTextEl = document.getElementById('ad-slide-text');
+            const adIndexEl = document.getElementById('ad-slide-index');
+            const adIconEl = document.getElementById('ad-slide-icon');
+
+            if (GAME_STATE.ads.length === 0) {
+                adTextEl.innerText = "📢 Anuncie Aqui!";
+                adIndexEl.innerText = "0/0";
                 return;
             }
 
-            leaderboard.forEach((entry, i) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="p-3 font-bold text-amber-400">${i + 1}</td>
-                    <td class="p-3">${entry.name}</td>
-                    <td class="p-3 text-gray-400">${entry.phase}</td>
-                    <td class="p-3 text-right font-mono font-bold text-emerald-400">${entry.score}</td>
+            adTextEl.classList.add('opacity-0', 'translate-y-2');
+
+            setTimeout(() => {
+                const currentAd = GAME_STATE.ads[GAME_STATE.currentAdIndex];
+                adTextEl.innerText = currentAd.text;
+                adIndexEl.innerText = `${GAME_STATE.currentAdIndex + 1}/${GAME_STATE.ads.length}`;
+                adIconEl.className = `fa-solid ${currentAd.icon || 'fa-bullhorn'} text-yellow-400 text-base md:text-lg`;
+                adTextEl.classList.remove('opacity-0', 'translate-y-2');
+            }, 300);
+        }
+
+        function renderAdEditList() {
+            const container = document.getElementById('ad-list-container');
+            container.innerHTML = '';
+
+            GAME_STATE.ads.forEach((ad, idx) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-700/60';
+                row.innerHTML = `
+                    <input type="text" value="${ad.text}" data-index="${idx}" class="ad-input flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500">
+                    <button class="btn-remove-ad p-2 text-gray-500 hover:text-rose-400 transition" data-index="${idx}">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
                 `;
-                tbody.appendChild(tr);
+                container.appendChild(row);
+            });
+
+            container.querySelectorAll('.btn-remove-ad').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const i = parseInt(e.currentTarget.getAttribute('data-index'));
+                    GAME_STATE.ads.splice(i, 1);
+                    renderAdEditList();
+                });
             });
         }
 
-        document.getElementById('btn-leaderboard').addEventListener('click', () => {
-            renderLeaderboard();
-            document.getElementById('modal-leaderboard').classList.remove('hidden');
-        });
-        document.getElementById('btn-close-leaderboard').addEventListener('click', () => {
-            document.getElementById('modal-leaderboard').classList.add('hidden');
-        });
+        // Leaderboard Local Database
+        function saveScoreLocal() {
+            try {
+                const scores = JSON.parse(localStorage.getItem('emoji_arcade_scores') || '[]');
+                const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
+                scores.push({
+                    name: GAME_STATE.playerName,
+                    score: GAME_STATE.score,
+                    stage: currentCfg.name,
+                    date: new Date().toLocaleDateString('pt-BR')
+                });
+                scores.sort((a, b) => b.score - a.score);
+                localStorage.setItem('emoji_arcade_scores', JSON.stringify(scores.slice(0, 10)));
+            } catch(e){}
+        }
 
-        // Início do Jogo no Modal
-        document.getElementById('btn-start-game').addEventListener('click', () => {
-            const nameInput = document.getElementById('player-name-input').value.trim();
-            if(nameInput) playerName = nameInput;
-            document.getElementById('player-display-name').innerText = playerName;
-            document.getElementById('modal-start').classList.add('hidden');
-            sound.init();
-            init3D();
-        });
+        function renderLeaderboard() {
+            const container = document.getElementById('leaderboard-list');
+            container.innerHTML = '';
 
-        // Loop de Animação e Atualização Física
+            try {
+                const scores = JSON.parse(localStorage.getItem('emoji_arcade_scores') || '[]');
+                if (scores.length === 0) {
+                    container.innerHTML = `<div class="text-center text-gray-500 py-6 text-sm">Nenhuma pontuação registrada ainda.</div>`;
+                    return;
+                }
+
+                scores.forEach((entry, index) => {
+                    const row = document.createElement('div');
+                    row.className = `flex justify-between items-center p-3 rounded-2xl ${index === 0 ? 'bg-yellow-500/20 border border-yellow-500/40 text-yellow-300' : 'bg-slate-800/50 border border-slate-700/50 text-gray-200'}`;
+                    row.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="font-black text-sm w-6 text-center">${index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}</span>
+                            <div>
+                                <div class="font-bold text-sm">${entry.name}</div>
+                                <div class="text-[10px] opacity-60">${entry.stage} • ${entry.date}</div>
+                            </div>
+                        </div>
+                        <span class="font-black text-yellow-400 text-base">${entry.score} pts</span>
+                    `;
+                    container.appendChild(row);
+                });
+            } catch(e){}
+        }
+
+        function updateUI() {
+            const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
+
+            document.getElementById('display-player-name').innerText = GAME_STATE.playerName;
+            document.getElementById('display-stage-name').innerText = currentCfg.name;
+            document.getElementById('display-score').innerText = GAME_STATE.score;
+            document.getElementById('display-target').innerText = `${GAME_STATE.score} / ${currentCfg.targetScore} pts`;
+
+            const coinsContainer = document.getElementById('display-credits');
+            coinsContainer.innerHTML = '';
+            for (let i = 0; i < GAME_STATE.credits; i++) {
+                coinsContainer.innerHTML += `<i class="fa-solid fa-circle-dot text-yellow-400 text-sm animate-pulse"></i>`;
+            }
+        }
+
+        function showToast(text) {
+            const toast = document.getElementById('toast-message');
+            document.getElementById('toast-text').innerText = text;
+            toast.classList.remove('translate-y-[-100px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-[-100px]', 'opacity-0');
+                toast.classList.remove('translate-y-0', 'opacity-100');
+            }, 2500);
+        }
+
         function animate() {
             requestAnimationFrame(animate);
+            world.step(1 / 60);
 
-            // Atualização Física
-            world.step(1/60);
-
-            // Suavizar posição da Garra
-            clawPos.x += (clawTarget.x - clawPos.x) * 0.1;
-            clawPos.y += (clawTarget.y - clawPos.y) * 0.1;
-            clawPos.z += (clawTarget.z - clawPos.z) * 0.1;
-
-            if(clawMesh) {
-                clawMesh.position.set(clawPos.x, clawPos.y, clawPos.z);
-            }
-
-            // Sincronizar Malha das Pelúcias com Física
-            plushiesList.forEach(p => {
-                p.mesh.position.copy(p.body.position);
-                p.mesh.quaternion.copy(p.body.quaternion);
+            GAME_STATE.plushiesInMachine.forEach(p => {
+                if (!p.captured) {
+                    p.mesh.position.copy(p.body.position);
+                    p.mesh.quaternion.copy(p.body.quaternion);
+                }
             });
 
             renderer.render(scene, camera);
@@ -788,6 +1137,116 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
+
+        function startStage(stageIdx) {
+            GAME_STATE.stageIndex = Math.min(stageIdx, STAGE_CONFIGS.length - 1);
+            const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
+
+            GAME_STATE.credits = currentCfg.credits;
+            spawnStagePlushies();
+            updateUI();
+
+            document.getElementById('modal-level-complete').classList.add('hidden');
+            document.getElementById('modal-game-over').classList.add('hidden');
+            showToast(`${currentCfg.name} Iniciada!`);
+        }
+
+        window.onload = function() {
+            initEngine();
+            initControls();
+            startAdSlideshow();
+            animate();
+
+            document.getElementById('form-start').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const nameInput = document.getElementById('input-player-name').value.trim();
+                if (nameInput) {
+                    GAME_STATE.playerName = nameInput;
+                    document.getElementById('modal-start').classList.add('hidden');
+                    document.getElementById('ui-overlay').classList.remove('hidden');
+                    document.getElementById('controls-overlay').classList.remove('hidden');
+
+                    startStage(0);
+                }
+            });
+
+            // PWA Install Triggers
+            document.getElementById('btn-pwa-install').addEventListener('click', installPWA);
+            document.getElementById('btn-modal-pwa').addEventListener('click', installPWA);
+
+            // Fullscreen Toggle
+            document.getElementById('btn-fullscreen').addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(()=>{});
+                } else {
+                    document.exitFullscreen().catch(()=>{});
+                }
+            });
+
+            // Ad Edit Modal Handlers
+            document.getElementById('btn-edit-ad').addEventListener('click', () => {
+                renderAdEditList();
+                document.getElementById('modal-edit-ad').classList.remove('hidden');
+            });
+
+            document.getElementById('btn-close-edit-ad').addEventListener('click', () => {
+                document.getElementById('modal-edit-ad').classList.add('hidden');
+            });
+
+            document.getElementById('btn-add-ad-row').addEventListener('click', () => {
+                GAME_STATE.ads.push({ icon: "fa-bullhorn", text: "📢 Sua nova propaganda editável aqui!" });
+                renderAdEditList();
+            });
+
+            document.getElementById('btn-save-ads').addEventListener('click', () => {
+                const inputs = document.querySelectorAll('.ad-input');
+                const newAds = [];
+                inputs.forEach((inp, idx) => {
+                    if (inp.value.trim()) {
+                        const existingIcon = GAME_STATE.ads[idx] ? GAME_STATE.ads[idx].icon : 'fa-bullhorn';
+                        newAds.push({ icon: existingIcon, text: inp.value.trim() });
+                    }
+                });
+                if (newAds.length > 0) GAME_STATE.ads = newAds;
+                GAME_STATE.currentAdIndex = 0;
+                updateAdDisplay();
+                document.getElementById('modal-edit-ad').classList.add('hidden');
+                showToast("Propagandas atualizadas!");
+            });
+
+            // Sound Toggle
+            document.getElementById('btn-sound').addEventListener('click', () => {
+                GAME_STATE.soundEnabled = !GAME_STATE.soundEnabled;
+                const icon = document.getElementById('btn-sound').querySelector('i');
+                icon.className = GAME_STATE.soundEnabled ? 'fa-solid fa-volume-high text-lg' : 'fa-solid fa-volume-xmark text-lg text-rose-400';
+            });
+
+            // Leaderboard Modals
+            const openLb = () => {
+                renderLeaderboard();
+                document.getElementById('modal-leaderboard').classList.remove('hidden');
+            };
+            document.getElementById('btn-leaderboard-open').addEventListener('click', openLb);
+            document.getElementById('btn-leaderboard-modal').addEventListener('click', openLb);
+            document.getElementById('btn-close-leaderboard').addEventListener('click', () => {
+                document.getElementById('modal-leaderboard').classList.add('hidden');
+            });
+            document.getElementById('btn-clear-scores').addEventListener('click', () => {
+                localStorage.removeItem('emoji_arcade_scores');
+                renderLeaderboard();
+            });
+
+            // Stage Progression Handlers
+            document.getElementById('btn-next-level').addEventListener('click', () => {
+                startStage(GAME_STATE.stageIndex + 1);
+            });
+
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                GAME_STATE.score = 0;
+                startStage(0);
+            });
+        };
     </script>
 </body>
-</html> 
+</html>
+``` 
