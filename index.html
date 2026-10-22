@@ -142,7 +142,7 @@
         </div>
     </div>
 
-    <!-- Bottom Controls Overlay -->
+    <!-- Bottom Controls Overlay & LED Advertising Slideshow -->
     <div id="controls-overlay" class="absolute bottom-0 left-0 right-0 p-3 md:p-5 pointer-events-none z-10 flex flex-col gap-3 justify-end items-center hidden">
       
         <!-- Virtual Joystick & Action Grab Button -->
@@ -175,6 +175,30 @@
                 <span class="text-[10px] text-pink-300 font-extrabold tracking-widest uppercase mt-1 opacity-90">Disparar Garra</span>
             </div>
         </div>
+
+        <!-- LED Mini Screen Slideshow (Miter Táxi, @carlamitertech, @clenilson_bass) -->
+        <div class="w-full max-w-2xl pointer-events-auto">
+            <div class="led-screen rounded-2xl p-2.5 relative flex items-center justify-between gap-2 overflow-hidden">
+                <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.3)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40"></div>
+
+                <div class="flex items-center gap-2 z-10 pl-1 shrink-0">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+                    <i id="ad-slide-icon" class="fa-solid fa-taxi text-yellow-400 text-base md:text-lg"></i>
+                </div>
+
+                <!-- Animated Slide Content -->
+                <div class="flex-1 overflow-hidden z-10 text-center px-2">
+                    <p id="ad-slide-text" class="slide-text-anim text-xs md:text-sm font-black tracking-wide text-emerald-300 font-mono">
+                        🚖 Miter Táxi - Transporte rápido, seguro e confiável!
+                    </p>
+                </div>
+
+                <!-- Slide Index Indicator -->
+                <div class="flex items-center gap-2 z-10 pr-1 shrink-0">
+                    <span id="ad-slide-index" class="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">1/3</span>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Start Modal / Player Setup -->
@@ -184,9 +208,9 @@
                 🧸
             </div>
 
-            <div class="text-3xl md:text-4xl font-black tracking-wide bg-gradient-to-r from-yellow-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent mb-1 uppercase">
+            <h1 class="text-3xl md:text-4xl font-black tracking-wide bg-gradient-to-r from-yellow-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent mb-1 uppercase">
                 KEKAKIDS 3D
-            </div>
+            </h1>
             <p class="text-gray-300 text-xs md:text-sm mb-6">
                 Pegue os emojis e ursinhos de pelúcia, acumule pontos e vença todas as fases no Arcade Kekakids!
             </p>
@@ -382,7 +406,13 @@
             credits: 6,
             clawState: 'IDLE',
             soundEnabled: true,
-            plushiesInMachine: []
+            plushiesInMachine: [],
+            ads: [
+                { icon: "fa-taxi", text: "🚖 Miter Táxi - Transporte rápido, seguro e confiável!" },
+                { icon: "fa-laptop-code", text: "💻 @carlamitertech - Tecnologia e Inovação!" },
+                { icon: "fa-guitar", text: "🎸 @clenilson_bass - Música e Contrabaixo!" }
+            ],
+            currentAdIndex: 0
         };
 
         const WHATSAPP_EMOJIS = [
@@ -958,6 +988,37 @@
             }
         }
 
+        // Advertisement Banner Slideshow
+        function startAdSlideshow() {
+            setInterval(() => {
+                if (GAME_STATE.ads.length === 0) return;
+                GAME_STATE.currentAdIndex = (GAME_STATE.currentAdIndex + 1) % GAME_STATE.ads.length;
+                updateAdDisplay();
+            }, 4500);
+        }
+
+        function updateAdDisplay() {
+            const adTextEl = document.getElementById('ad-slide-text');
+            const adIndexEl = document.getElementById('ad-slide-index');
+            const adIconEl = document.getElementById('ad-slide-icon');
+
+            if (GAME_STATE.ads.length === 0) {
+                adTextEl.innerText = "📢 Anuncie Aqui!";
+                adIndexEl.innerText = "0/0";
+                return;
+            }
+
+            adTextEl.classList.add('opacity-0', 'translate-y-2');
+
+            setTimeout(() => {
+                const currentAd = GAME_STATE.ads[GAME_STATE.currentAdIndex];
+                adTextEl.innerText = currentAd.text;
+                adIndexEl.innerText = `${GAME_STATE.currentAdIndex + 1}/${GAME_STATE.ads.length}`;
+                adIconEl.className = `fa-solid ${currentAd.icon || 'fa-bullhorn'} text-yellow-400 text-base md:text-lg`;
+                adTextEl.classList.remove('opacity-0', 'translate-y-2');
+            }, 300);
+        }
+
         function saveScoreLocal() {
             try {
                 const scores = JSON.parse(localStorage.getItem('kekakids_arcade_scores') || '[]');
@@ -1065,6 +1126,7 @@
         window.onload = function() {
             initEngine();
             initControls();
+            startAdSlideshow();
             animate();
 
             document.getElementById('form-start').addEventListener('submit', (e) => {
