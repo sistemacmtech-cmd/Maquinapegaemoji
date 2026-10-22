@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>3D Emoji Claw Machine - Arcade PWA</title>
+    <title>Kekakids - 3D Claw Machine Arcade PWA</title>
 
     <!-- PWA & Mobile Optimization Meta Tags -->
     <meta name="theme-color" content="#12131C">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ClawArcade">
+    <meta name="apple-mobile-web-app-title" content="Kekakids">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="description" content="Jogo PWA 3D da Máquina de Pegar Emojis do WhatsApp na Galeria de Shopping Arcade!">
+    <meta name="description" content="Jogo PWA 3D da Máquina de Pegar Emojis e Ursinhos na Galeria de Shopping Kekakids!">
 
     <!-- Dynamic Inline Web App Manifest Data URI -->
     <link rel="manifest" id="pwa-manifest">
@@ -142,9 +142,9 @@
         </div>
     </div>
 
-    <!-- Bottom Controls Overlay & LED Advertising Slideshow -->
+    <!-- Bottom Controls Overlay -->
     <div id="controls-overlay" class="absolute bottom-0 left-0 right-0 p-3 md:p-5 pointer-events-none z-10 flex flex-col gap-3 justify-end items-center hidden">
-       
+      
         <!-- Virtual Joystick & Action Grab Button -->
         <div class="w-full max-w-2xl flex justify-between items-end">
             <!-- On-Screen Virtual Joystick -->
@@ -175,47 +175,20 @@
                 <span class="text-[10px] text-pink-300 font-extrabold tracking-widest uppercase mt-1 opacity-90">Disparar Garra</span>
             </div>
         </div>
-
-        <!-- Editable LED Mini Screen (Miter Táxi, @carlamitertech, @clenilson_bass) -->
-        <div class="w-full max-w-2xl pointer-events-auto">
-            <div class="led-screen rounded-2xl p-2.5 relative flex items-center justify-between gap-2 overflow-hidden">
-                <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.3)_50%)] bg-[length:100%_4px] pointer-events-none opacity-40"></div>
-
-                <div class="flex items-center gap-2 z-10 pl-1 shrink-0">
-                    <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
-                    <i id="ad-slide-icon" class="fa-solid fa-taxi text-yellow-400 text-base md:text-lg"></i>
-                </div>
-
-                <!-- Animated Slide Content -->
-                <div class="flex-1 overflow-hidden z-10 text-center px-2">
-                    <p id="ad-slide-text" class="slide-text-anim text-xs md:text-sm font-black tracking-wide text-emerald-300 font-mono">
-                        🚖 Miter Táxi - Transporte rápido, seguro e confiável!
-                    </p>
-                </div>
-
-                <!-- Slide Index & Real-time Edit Button -->
-                <div class="flex items-center gap-2 z-10 pr-1 shrink-0">
-                    <span id="ad-slide-index" class="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-500/30">1/3</span>
-                    <button id="btn-edit-ad" class="p-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 hover:text-white border border-emerald-500/40 transition text-xs" title="Editar Slides de Propaganda">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Start Modal / Player Setup -->
     <div id="modal-start" class="fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
         <div class="glass-panel w-full max-w-md rounded-3xl p-6 md:p-8 border-pink-500/40 shadow-2xl flex flex-col items-center text-center relative overflow-hidden">
             <div class="w-20 h-20 rounded-2xl bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 flex items-center justify-center text-white text-4xl shadow-lg mb-4 neon-border">
-                🤩
+                🧸
             </div>
 
-            <h1 class="text-3xl md:text-4xl font-black tracking-wide bg-gradient-to-r from-yellow-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent mb-1">
-                CLAW ARCADE 3D PWA
-            </h1>
+            <div class="text-3xl md:text-4xl font-black tracking-wide bg-gradient-to-r from-yellow-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent mb-1 uppercase">
+                KEKAKIDS 3D
+            </div>
             <p class="text-gray-300 text-xs md:text-sm mb-6">
-                Pegue os emojis do WhatsApp, acumule pontos e vença todas as fases no Arcade do Shopping!
+                Pegue os emojis e ursinhos de pelúcia, acumule pontos e vença todas as fases no Arcade Kekakids!
             </p>
 
             <form id="form-start" class="w-full flex flex-col gap-4">
@@ -235,39 +208,6 @@
                 </button>
                 <button id="btn-leaderboard-modal" class="text-gray-400 hover:text-white underline transition">
                     Ver Ranking (High Scores)
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Edit Advertisements Modal -->
-    <div id="modal-edit-ad" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md hidden">
-        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 border-emerald-500/50 shadow-2xl flex flex-col max-h-[85vh]">
-            <div class="flex justify-between items-center pb-4 border-b border-gray-700">
-                <div class="flex items-center gap-2">
-                    <i class="fa-solid fa-sliders text-emerald-400 text-xl"></i>
-                    <h3 class="text-xl font-black text-white">Editar Slides de Propaganda</h3>
-                </div>
-                <button id="btn-close-edit-ad" class="text-gray-400 hover:text-white p-1">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-
-            <p class="text-xs text-gray-400 my-3">
-                Edite ou adicione anúncios para passar no visor digital da máquina:
-            </p>
-
-            <div id="ad-list-container" class="space-y-2.5 overflow-y-auto max-h-60 pr-1 my-2"></div>
-
-            <div class="flex gap-2 mt-3">
-                <button id="btn-add-ad-row" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1">
-                    <i class="fa-solid fa-plus"></i> Adicionar Anúncio
-                </button>
-            </div>
-
-            <div class="flex gap-3 justify-end mt-6 pt-3 border-t border-gray-700/60">
-                <button id="btn-save-ads" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-black rounded-xl shadow-lg transition tracking-wide uppercase">
-                    <i class="fa-solid fa-check mr-1"></i> Salvar Alterações
                 </button>
             </div>
         </div>
@@ -353,9 +293,9 @@
          * PWA REGISTRATION & MANIFEST INJECTION
          */
         const pwaManifestData = {
-            "name": "Emoji Claw Machine Arcade 3D",
-            "short_name": "ClawArcade",
-            "description": "Jogo da Máquina de Pegar Emojis do WhatsApp 3D em Arcade de Shopping!",
+            "name": "Kekakids Claw Machine Arcade 3D",
+            "short_name": "Kekakids",
+            "description": "Jogo da Máquina de Pegar Emojis e Ursinhos 3D no Arcade Kekakids!",
             "start_url": "./",
             "display": "standalone",
             "background_color": "#080911",
@@ -363,7 +303,7 @@
             "orientation": "portrait-primary",
             "icons": [
                 {
-                    "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2312131C'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='320'>🤩</text></svg>",
+                    "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%2312131C'/><text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' font-size='320'>🧸</text></svg>",
                     "sizes": "192x192 512x512",
                     "type": "image/svg+xml"
                 }
@@ -376,7 +316,7 @@
         // Inline Service Worker Setup
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'claw-arcade-v1';
+                const CACHE_NAME = 'kekakids-arcade-v1';
                 const ASSETS = [
                     './',
                     'https://cdn.tailwindcss.com',
@@ -405,7 +345,6 @@
                 .catch(err => console.log('SW Erro:', err));
         }
 
-        // PWA Deferred Prompt Handler
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
@@ -419,7 +358,7 @@
                 deferredPrompt.prompt();
                 deferredPrompt.userChoice.then((choiceResult) => {
                     if (choiceResult.outcome === 'accepted') {
-                        showToast("Obrigado por instalar o Claw Arcade!");
+                        showToast("Obrigado por instalar o Kekakids Arcade!");
                     }
                     deferredPrompt = null;
                     document.getElementById('btn-pwa-install').classList.add('hidden');
@@ -428,15 +367,12 @@
             }
         }
 
-        /**
-         * GAME ENGINE & MECHANICS
-         */
         const STAGE_CONFIGS = [
             { stage: 1, name: "Fase 1: Iniciante", targetScore: 300, credits: 6, emojiCount: 14 },
             { stage: 2, name: "Fase 2: Desafio de Precisão", targetScore: 700, credits: 5, emojiCount: 16 },
             { stage: 3, name: "Fase 3: Caçador de Raros", targetScore: 1200, credits: 5, emojiCount: 18 },
             { stage: 4, name: "Fase 4: Mestre da Garra", targetScore: 1800, credits: 5, emojiCount: 20 },
-            { stage: 5, name: "Fase 5: Galeria Arcade Infinita", targetScore: 3000, credits: 7, emojiCount: 24 }
+            { stage: 5, name: "Fase 5: Vale dos Ursinhos", targetScore: 3000, credits: 7, emojiCount: 24 }
         ];
 
         const GAME_STATE = {
@@ -446,13 +382,7 @@
             credits: 6,
             clawState: 'IDLE',
             soundEnabled: true,
-            plushiesInMachine: [],
-            ads: [
-                { icon: "fa-taxi", text: "🚖 Miter Táxi - Transporte rápido, seguro e confiável!" },
-                { icon: "fa-laptop-code", text: "💻 @carlamitertech - Tecnologia e Inovação!" },
-                { icon: "fa-guitar", text: "🎸 @clenilson_bass - Música e Contrabaixo!" }
-            ],
-            currentAdIndex: 0
+            plushiesInMachine: []
         };
 
         const WHATSAPP_EMOJIS = [
@@ -474,7 +404,6 @@
             { char: '🎁', color: '#e11d48', points: 300 }
         ];
 
-        // Sound Effects Synth
         class SoundFX {
             constructor() { this.ctx = null; }
             init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
@@ -534,7 +463,7 @@
 
         function initEngine() {
             const canvas = document.getElementById('game-canvas');
-           
+          
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x080911);
             scene.fog = new THREE.FogExp2(0x080911, 0.03);
@@ -723,6 +652,41 @@
             GAME_STATE.plushiesInMachine.push({ mesh: plushieGroup, body: pBody, def: emojiDef, captured: false });
         }
 
+        function createBearPlushie(x, y, z) {
+            const bearGroup = new THREE.Group();
+            const furMaterial = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8, metalness: 0.1 });
+            const snoutMaterial = new THREE.MeshStandardMaterial({ color: 0xfef3c7, roughness: 0.8 });
+
+            const bodyMesh = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), furMaterial);
+            bearGroup.add(bodyMesh);
+
+            const headMesh = new THREE.Mesh(new THREE.SphereGeometry(0.26, 16, 16), furMaterial);
+            headMesh.position.set(0, 0.35, 0);
+            bearGroup.add(headMesh);
+
+            const earGeo = new THREE.SphereGeometry(0.1, 12, 12);
+            const earLeft = new THREE.Mesh(earGeo, furMaterial);
+            earLeft.position.set(-0.18, 0.55, 0);
+            const earRight = new THREE.Mesh(earGeo, furMaterial);
+            earRight.position.set(0.18, 0.55, 0);
+            bearGroup.add(earLeft);
+            bearGroup.add(earRight);
+
+            const snout = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), snoutMaterial);
+            snout.position.set(0, 0.32, 0.22);
+            bearGroup.add(snout);
+
+            bearGroup.position.set(x, y, z);
+            scene.add(bearGroup);
+
+            const pBody = new CANNON.Body({ mass: 0.9, material: physicsMaterials.plushie, linearDamping: 0.4, angularDamping: 0.4 });
+            pBody.addShape(new CANNON.Sphere(0.35));
+            pBody.position.set(x, y, z);
+            world.addBody(pBody);
+
+            GAME_STATE.plushiesInMachine.push({ mesh: bearGroup, body: pBody, def: { char: '🧸', points: 400 }, captured: false });
+        }
+
         function spawnStagePlushies() {
             GAME_STATE.plushiesInMachine.forEach(p => {
                 scene.remove(p.mesh);
@@ -732,15 +696,19 @@
 
             const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
             for (let i = 0; i < currentCfg.emojiCount; i++) {
-                const emoji = WHATSAPP_EMOJIS[i % WHATSAPP_EMOJIS.length];
                 const rx = (Math.random() - 0.5) * 3.2;
                 const rz = (Math.random() - 0.5) * 3.2;
                 const ry = 2.4 + (i * 0.22);
-                createEmojiPlushie(emoji, rx, ry, rz);
+
+                if (GAME_STATE.stageIndex >= 4) {
+                    createBearPlushie(rx, ry, rz);
+                } else {
+                    const emoji = WHATSAPP_EMOJIS[i % WHATSAPP_EMOJIS.length];
+                    createEmojiPlushie(emoji, rx, ry, rz);
+                }
             }
         }
 
-        // Joystick & Keyboard Controls
         let joystickActive = false;
         let joystickVector = { x: 0, y: 0 };
 
@@ -753,7 +721,7 @@
                 const rect = joystickZone.getBoundingClientRect();
                 const centerX = rect.left + rect.width / 2;
                 const centerY = rect.top + rect.height / 2;
-               
+              
                 let dx = clientX - centerX;
                 let dy = clientY - centerY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
@@ -848,7 +816,7 @@
 
                     for (let p of GAME_STATE.plushiesInMachine) {
                         const dist = clawGroup.position.distanceTo(p.mesh.position);
-                        if (dist < 0.75) {
+                        if (dist < 0.85) {
                             clearInterval(dropInterval);
                             executeGrab(p);
                             return;
@@ -879,11 +847,11 @@
                 fingerAngle += 0.05;
                 clawFingers.forEach(f => { f.rotation.z = fingerAngle; });
 
-                if (fingerAngle >= 0.4) {
+                if (fingerAngle >= 0.45) {
                     clearInterval(grabInterval);
-                   
+                  
                     if (targetPlushie) {
-                        const successChance = 0.75 + (GAME_STATE.stageIndex * 0.03);
+                        const successChance = 0.85 + (GAME_STATE.stageIndex * 0.03);
                         if (Math.random() < successChance) {
                             grabbedPlushie = targetPlushie;
                             showToast(`Agarrou ${targetPlushie.def.char} (${targetPlushie.def.points} pts)!`);
@@ -946,7 +914,7 @@
 
             if (grabbedPlushie) {
                 grabbedPlushie.body.velocity.set(0, -5, 0);
-               
+              
                 setTimeout(() => {
                     sfx.playSuccess();
                     confetti({ particleCount: 80, spread: 60, origin: { y: 0.7 } });
@@ -990,66 +958,9 @@
             }
         }
 
-        // Advertisement Banner Slideshow
-        function startAdSlideshow() {
-            setInterval(() => {
-                if (GAME_STATE.ads.length === 0) return;
-                GAME_STATE.currentAdIndex = (GAME_STATE.currentAdIndex + 1) % GAME_STATE.ads.length;
-                updateAdDisplay();
-            }, 4500);
-        }
-
-        function updateAdDisplay() {
-            const adTextEl = document.getElementById('ad-slide-text');
-            const adIndexEl = document.getElementById('ad-slide-index');
-            const adIconEl = document.getElementById('ad-slide-icon');
-
-            if (GAME_STATE.ads.length === 0) {
-                adTextEl.innerText = "📢 Anuncie Aqui!";
-                adIndexEl.innerText = "0/0";
-                return;
-            }
-
-            adTextEl.classList.add('opacity-0', 'translate-y-2');
-
-            setTimeout(() => {
-                const currentAd = GAME_STATE.ads[GAME_STATE.currentAdIndex];
-                adTextEl.innerText = currentAd.text;
-                adIndexEl.innerText = `${GAME_STATE.currentAdIndex + 1}/${GAME_STATE.ads.length}`;
-                adIconEl.className = `fa-solid ${currentAd.icon || 'fa-bullhorn'} text-yellow-400 text-base md:text-lg`;
-                adTextEl.classList.remove('opacity-0', 'translate-y-2');
-            }, 300);
-        }
-
-        function renderAdEditList() {
-            const container = document.getElementById('ad-list-container');
-            container.innerHTML = '';
-
-            GAME_STATE.ads.forEach((ad, idx) => {
-                const row = document.createElement('div');
-                row.className = 'flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-700/60';
-                row.innerHTML = `
-                    <input type="text" value="${ad.text}" data-index="${idx}" class="ad-input flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-emerald-300 font-mono focus:outline-none focus:border-emerald-500">
-                    <button class="btn-remove-ad p-2 text-gray-500 hover:text-rose-400 transition" data-index="${idx}">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                `;
-                container.appendChild(row);
-            });
-
-            container.querySelectorAll('.btn-remove-ad').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const i = parseInt(e.currentTarget.getAttribute('data-index'));
-                    GAME_STATE.ads.splice(i, 1);
-                    renderAdEditList();
-                });
-            });
-        }
-
-        // Leaderboard Local Database
         function saveScoreLocal() {
             try {
-                const scores = JSON.parse(localStorage.getItem('emoji_arcade_scores') || '[]');
+                const scores = JSON.parse(localStorage.getItem('kekakids_arcade_scores') || '[]');
                 const currentCfg = STAGE_CONFIGS[GAME_STATE.stageIndex];
                 scores.push({
                     name: GAME_STATE.playerName,
@@ -1058,7 +969,7 @@
                     date: new Date().toLocaleDateString('pt-BR')
                 });
                 scores.sort((a, b) => b.score - a.score);
-                localStorage.setItem('emoji_arcade_scores', JSON.stringify(scores.slice(0, 10)));
+                localStorage.setItem('kekakids_arcade_scores', JSON.stringify(scores.slice(0, 10)));
             } catch(e){}
         }
 
@@ -1067,7 +978,7 @@
             container.innerHTML = '';
 
             try {
-                const scores = JSON.parse(localStorage.getItem('emoji_arcade_scores') || '[]');
+                const scores = JSON.parse(localStorage.getItem('kekakids_arcade_scores') || '[]');
                 if (scores.length === 0) {
                     container.innerHTML = `<div class="text-center text-gray-500 py-6 text-sm">Nenhuma pontuação registrada ainda.</div>`;
                     return;
@@ -1154,7 +1065,6 @@
         window.onload = function() {
             initEngine();
             initControls();
-            startAdSlideshow();
             animate();
 
             document.getElementById('form-start').addEventListener('submit', (e) => {
@@ -1170,11 +1080,9 @@
                 }
             });
 
-            // PWA Install Triggers
             document.getElementById('btn-pwa-install').addEventListener('click', installPWA);
             document.getElementById('btn-modal-pwa').addEventListener('click', installPWA);
 
-            // Fullscreen Toggle
             document.getElementById('btn-fullscreen').addEventListener('click', () => {
                 if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen().catch(()=>{});
@@ -1183,45 +1091,12 @@
                 }
             });
 
-            // Ad Edit Modal Handlers
-            document.getElementById('btn-edit-ad').addEventListener('click', () => {
-                renderAdEditList();
-                document.getElementById('modal-edit-ad').classList.remove('hidden');
-            });
-
-            document.getElementById('btn-close-edit-ad').addEventListener('click', () => {
-                document.getElementById('modal-edit-ad').classList.add('hidden');
-            });
-
-            document.getElementById('btn-add-ad-row').addEventListener('click', () => {
-                GAME_STATE.ads.push({ icon: "fa-bullhorn", text: "📢 Sua nova propaganda editável aqui!" });
-                renderAdEditList();
-            });
-
-            document.getElementById('btn-save-ads').addEventListener('click', () => {
-                const inputs = document.querySelectorAll('.ad-input');
-                const newAds = [];
-                inputs.forEach((inp, idx) => {
-                    if (inp.value.trim()) {
-                        const existingIcon = GAME_STATE.ads[idx] ? GAME_STATE.ads[idx].icon : 'fa-bullhorn';
-                        newAds.push({ icon: existingIcon, text: inp.value.trim() });
-                    }
-                });
-                if (newAds.length > 0) GAME_STATE.ads = newAds;
-                GAME_STATE.currentAdIndex = 0;
-                updateAdDisplay();
-                document.getElementById('modal-edit-ad').classList.add('hidden');
-                showToast("Propagandas atualizadas!");
-            });
-
-            // Sound Toggle
             document.getElementById('btn-sound').addEventListener('click', () => {
                 GAME_STATE.soundEnabled = !GAME_STATE.soundEnabled;
                 const icon = document.getElementById('btn-sound').querySelector('i');
                 icon.className = GAME_STATE.soundEnabled ? 'fa-solid fa-volume-high text-lg' : 'fa-solid fa-volume-xmark text-lg text-rose-400';
             });
 
-            // Leaderboard Modals
             const openLb = () => {
                 renderLeaderboard();
                 document.getElementById('modal-leaderboard').classList.remove('hidden');
@@ -1232,11 +1107,10 @@
                 document.getElementById('modal-leaderboard').classList.add('hidden');
             });
             document.getElementById('btn-clear-scores').addEventListener('click', () => {
-                localStorage.removeItem('emoji_arcade_scores');
+                localStorage.removeItem('kekakids_arcade_scores');
                 renderLeaderboard();
             });
 
-            // Stage Progression Handlers
             document.getElementById('btn-next-level').addEventListener('click', () => {
                 startStage(GAME_STATE.stageIndex + 1);
             });
@@ -1249,4 +1123,5 @@
     </script>
 </body>
 </html>
-``` 
+
+ 
